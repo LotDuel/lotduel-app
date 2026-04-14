@@ -67,6 +67,10 @@ export function recalculateOffers(requestId) {
   return apiFetch(`/api/requests/${requestId}/recalculate`, { method: "POST" });
 }
 
+export function refreshMarketData(requestId) {
+  return apiFetch(`/api/requests/${requestId}/market`, { method: "POST" });
+}
+
 // ── Invites ────────────────────────────────────────────────────────
 
 export function createInvite(requestId, dealerData) {

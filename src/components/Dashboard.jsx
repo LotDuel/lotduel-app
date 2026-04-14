@@ -94,6 +94,11 @@ export default function Dashboard({ requestId, demo }) {
     status = req.status === "active" ? "Active" : req.status;
   }
 
+  // Market data from API (comparables info)
+  const marketSource = !demo && apiData?.stats?.market_source;
+  const marketInfo = !demo && apiData?.request?.market;
+  const numComparables = marketInfo?.num_listings || 0;
+
   // Loading state
   if (loading) {
     return (
@@ -199,7 +204,7 @@ export default function Dashboard({ requestId, demo }) {
             <div style={{ color: "#475569", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 20 }}>Your Leverage</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 22 }}>
               {[
-                ["Market Avg", fmt(marketValue), "#f1f5f9"],
+                [marketSource === "marketcheck" ? "Market Value" : "Market Avg", fmt(marketValue), "#f1f5f9"],
                 ["Offer Avg", fmt(avgOtd), "#f1f5f9"],
                 ["Savings vs Avg", fmt(savings), savings > 0 ? "var(--green)" : "var(--red)"],
                 ["Leverage", offerCount >= 5 ? "High" : offerCount >= 3 ? "Medium" : "Building", "var(--amber)"]
@@ -207,6 +212,9 @@ export default function Dashboard({ requestId, demo }) {
                 <div key={i}>
                   <div style={{ color: "#475569", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, marginBottom: 4 }}>{l}</div>
                   <div style={{ color: c, fontSize: 24, fontWeight: 800, fontFamily: l === "Leverage" ? "var(--font)" : "var(--mono)", letterSpacing: "-0.02em" }}>{v}</div>
+                  {i === 0 && marketSource === "marketcheck" && numComparables > 0 && (
+                    <div style={{ color: "#475569", fontSize: 10, marginTop: 4 }}>Based on {numComparables} listings</div>
+                  )}
                 </div>
               ))}
             </div>

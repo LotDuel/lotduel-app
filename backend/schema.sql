@@ -22,6 +22,8 @@ CREATE TABLE vehicle_requests (
     zip_code VARCHAR(10) NOT NULL,
     radius_miles INTEGER DEFAULT 50,
     market_value INTEGER,
+    market_source VARCHAR(20),
+    market_data TEXT,
     notes TEXT,
     status VARCHAR(20) DEFAULT 'active',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL

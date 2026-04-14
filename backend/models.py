@@ -46,7 +46,9 @@ class VehicleRequest(db.Model):
     mileage_max = db.Column(db.Integer, nullable=False)
     zip_code = db.Column(db.String(10), nullable=False)
     radius_miles = db.Column(db.Integer, default=50)
-    market_value = db.Column(db.Integer, nullable=True)  # Manual entry for now
+    market_value = db.Column(db.Integer, nullable=True)  # Fair market price
+    market_source = db.Column(db.String(20), nullable=True)  # "marketcheck" or "manual"
+    market_data = db.Column(db.Text, nullable=True)  # Full MarketCheck JSON response
     notes = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), default="active")  # active, closed, expired
     created_at = db.Column(
@@ -56,7 +58,7 @@ class VehicleRequest(db.Model):
     invites = db.relationship("DealerInvite", backref="vehicle_request", lazy="dynamic")
     offers = db.relationship("Offer", backref="vehicle_request", lazy="dynamic")
 
-    def to_dict(self, include_stats=False):
+    def to_dict(self, include_stats=False, include_market=False):
         d = {
             "id": self.id,
             "user_id": self.user_id,
@@ -69,6 +71,7 @@ class VehicleRequest(db.Model):
             "zip_code": self.zip_code,
             "radius_miles": self.radius_miles,
             "market_value": self.market_value,
+            "market_source": self.market_source,
             "notes": self.notes,
             "status": self.status,
             "created_at": self.created_at.isoformat(),
@@ -76,6 +79,12 @@ class VehicleRequest(db.Model):
         if include_stats:
             d["invite_count"] = self.invites.count()
             d["offer_count"] = self.offers.count()
+        if include_market and self.market_data:
+            import json as _json
+            try:
+                d["market"] = _json.loads(self.market_data)
+            except (ValueError, TypeError):
+                d["market"] = None
         return d
 
 

@@ -11,6 +11,9 @@ class Config:
     # Frontend URL for CORS
     FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
+    # MarketCheck API
+    MARKETCHECK_API_KEY = os.getenv("MARKETCHECK_API_KEY", "")
+
 
 class DevelopmentConfig(Config):
     DEBUG = True

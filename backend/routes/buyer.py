@@ -5,9 +5,10 @@ Handles vehicle requests, dealer invites, offer viewing, and email generation.
 
 import json
 from datetime import datetime, timezone
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from models import db, User, VehicleRequest, Dealer, DealerInvite, Offer
 from scoring import score_offers
+from market import fetch_market_data
 
 buyer_bp = Blueprint("buyer", __name__, url_prefix="/api")
 
@@ -43,7 +44,7 @@ def get_user(user_id):
 
 @buyer_bp.route("/requests", methods=["POST"])
 def create_request():
-    """Create a new vehicle request."""
+    """Create a new vehicle request. Auto-fetches market data from MarketCheck."""
     data = request.get_json()
     required = ["user_id", "make", "model", "year_min", "year_max", "mileage_max", "zip_code"]
     missing = [f for f in required if not data.get(f)]
@@ -64,8 +65,14 @@ def create_request():
         notes=data.get("notes"),
     )
     db.session.add(vr)
+    db.session.flush()
+
+    # Auto-fetch market data if no manual value provided
+    if not vr.market_value:
+        _fetch_and_store_market_data(vr)
+
     db.session.commit()
-    return jsonify(vr.to_dict(include_stats=True)), 201
+    return jsonify(vr.to_dict(include_stats=True, include_market=True)), 201
 
 
 @buyer_bp.route("/requests/<int:request_id>", methods=["GET"])
@@ -94,6 +101,62 @@ def update_request(request_id):
 
     db.session.commit()
     return jsonify(vr.to_dict(include_stats=True))
+
+
+@buyer_bp.route("/requests/<int:request_id>/market", methods=["GET"])
+def get_market_data(request_id):
+    """Get market valuation data for a vehicle request."""
+    vr = VehicleRequest.query.get_or_404(request_id)
+    return jsonify(vr.to_dict(include_market=True))
+
+
+@buyer_bp.route("/requests/<int:request_id>/market", methods=["POST"])
+def refresh_market_data(request_id):
+    """Refresh market data from MarketCheck API."""
+    vr = VehicleRequest.query.get_or_404(request_id)
+    result = _fetch_and_store_market_data(vr)
+    db.session.commit()
+
+    if result:
+        return jsonify({
+            "message": f"Market data updated — {result['num_listings']} comparable listings found",
+            "market_value": vr.market_value,
+            "market": result,
+        })
+    else:
+        return jsonify({
+            "error": "Could not fetch market data. Check API key or try again.",
+            "market_value": vr.market_value,
+        }), 502
+
+
+def _fetch_and_store_market_data(vr):
+    """Fetch market data from MarketCheck and store on the vehicle request."""
+    api_key = current_app.config.get("MARKETCHECK_API_KEY")
+    if not api_key:
+        return None
+
+    result = fetch_market_data(
+        api_key=api_key,
+        make=vr.make,
+        model=vr.model,
+        year_min=vr.year_min,
+        year_max=vr.year_max,
+        mileage_max=vr.mileage_max,
+        zip_code=vr.zip_code,
+        radius_miles=vr.radius_miles,
+    )
+
+    if result and result.get("market_value"):
+        vr.market_value = result["market_value"]
+        vr.market_source = "marketcheck"
+        vr.market_data = json.dumps(result)
+    elif result:
+        # Got a response but no listings found
+        vr.market_data = json.dumps(result)
+        vr.market_source = "marketcheck"
+
+    return result
 
 
 @buyer_bp.route("/users/<int:user_id>/requests", methods=["GET"])
@@ -262,12 +325,13 @@ def dashboard(request_id):
     invite_count = DealerInvite.query.filter_by(vehicle_request_id=request_id).count()
 
     return jsonify({
-        "request": vr.to_dict(),
+        "request": vr.to_dict(include_market=True),
         "offers": [o.to_dict() for o in ranked],
         "stats": {
             "invite_count": invite_count,
             "offer_count": len(ranked),
             "market_value": market_value,
+            "market_source": vr.market_source,
             "avg_price": avg_price,
             "best_price": best_price,
             "savings": savings,
