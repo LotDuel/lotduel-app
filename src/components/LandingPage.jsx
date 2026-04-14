@@ -83,7 +83,7 @@ export default function LandingPage({ onDemo, onCreate }) {
             transition: "all 0.3s ease",
             boxShadow: "0 4px 24px rgba(245,158,11,0.25)"
           }}>
-            Get Started — Free
+            Start Your Duel
           </button>
           <button onClick={onDemo} style={{
             padding: "16px 32px",
@@ -95,6 +95,17 @@ export default function LandingPage({ onDemo, onCreate }) {
           }}>
             See Demo
           </button>
+        </div>
+
+        {/* Trust Strip */}
+        <div className="anim-fade-up anim-d4" style={{
+          marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 24, flexWrap: "wrap"
+        }}>
+          {["No phone calls", "No spam", "You stay in control"].map((t, i) => (
+            <span key={i} style={{ color: "#64748b", fontSize: 13, fontWeight: 500 }}>
+              {i > 0 && <span style={{ marginRight: 24 }}>·</span>}{t}
+            </span>
+          ))}
         </div>
 
         {/* Stats */}
@@ -175,6 +186,26 @@ export default function LandingPage({ onDemo, onCreate }) {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Emotional Closer */}
+      <section style={{
+        position: "relative", zIndex: 10,
+        maxWidth: 800, margin: "0 auto", padding: "20px 24px 0", textAlign: "center"
+      }}>
+        <p style={{
+          fontSize: "clamp(20px, 3vw, 26px)", fontWeight: 600,
+          color: "#cbd5e1", lineHeight: 1.5, letterSpacing: "-0.02em"
+        }}>
+          Walk into the dealership knowing you already have{" "}
+          <span style={{
+            background: "linear-gradient(135deg, #22c55e, #4ade80)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", fontWeight: 900
+          }}>the best offer</span>.
+        </p>
+        <p style={{ color: "#64748b", fontSize: 15, marginTop: 12 }}>
+          Buyers typically save $1,000+ when dealers compete.
+        </p>
       </section>
 
       {/* Demo CTA */}
