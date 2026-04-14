@@ -20,20 +20,20 @@ JOBS = {
             "cd /opt/lotduel/lotduel-app && git pull origin main",
             "cd /opt/lotduel/lotduel-app/backend && source venv/bin/activate && pip install -r requirements.txt -q",
             "cd /opt/lotduel/lotduel-app/backend && source venv/bin/activate && python -c \"from app import create_app; from models import db; app = create_app('production'); app.app_context().push(); db.create_all(); print('DB updated')\"",
-            "systemctl restart lotduel",
+            "sudo systemctl restart lotduel",
         ],
     },
     "restart": {
         "description": "Restart the LotDuel service",
-        "commands": ["systemctl restart lotduel"],
+        "commands": ["sudo systemctl restart lotduel"],
     },
     "status": {
         "description": "Check service status",
-        "commands": ["systemctl is-active lotduel && curl -s localhost:5000/api/health"],
+        "commands": ["sudo systemctl is-active lotduel && curl -s localhost:5000/api/health"],
     },
     "logs": {
         "description": "Get recent service logs",
-        "commands": ["journalctl -u lotduel -n 40 --no-pager"],
+        "commands": ["sudo journalctl -u lotduel -n 40 --no-pager"],
     },
     "disk": {
         "description": "Check disk and memory usage",
@@ -42,12 +42,12 @@ JOBS = {
     "env": {
         "description": "Show non-secret env vars (masks sensitive values)",
         "commands": [
-            "cd /opt/lotduel/lotduel-app/backend && cat .env | sed -E 's/(KEY|SECRET|PASSWORD|URL)=.*/\\1=***MASKED***/'",
+            "cd /opt/lotduel/lotduel-app/backend && cat .env | sed -E 's/(KEY|SECRET|PASSWORD|URL|TOKEN)=.*/\\1=***MASKED***/'",
         ],
     },
     "nginx_reload": {
         "description": "Test and reload nginx config",
-        "commands": ["nginx -t && systemctl reload nginx"],
+        "commands": ["sudo systemctl reload nginx"],
     },
 }
 
