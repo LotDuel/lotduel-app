@@ -1,0 +1,110 @@
+/* ═══════════════════════════════════════════
+   LOTDUEL — Global Styles
+   ═══════════════════════════════════════════ */
+
+:root {
+  --amber: #f59e0b;
+  --amber-dark: #d97706;
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #eab308;
+  --bg: #06090f;
+  --surface: #0c1220;
+  --border: rgba(255, 255, 255, 0.06);
+  --font: 'Outfit', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Animations ─── */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.15); }
+  50% { box-shadow: 0 0 40px rgba(245, 158, 11, 0.3); }
+}
+
+@keyframes slideRow {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes gridPulse {
+  0%, 100% { opacity: 0.03; }
+  50% { opacity: 0.06; }
+}
+
+.anim-fade-up {
+  animation: fadeUp 0.7s ease-out forwards;
+  opacity: 0;
+}
+.anim-d1 { animation-delay: 0.1s; }
+.anim-d2 { animation-delay: 0.25s; }
+.anim-d3 { animation-delay: 0.4s; }
+.anim-d4 { animation-delay: 0.55s; }
+.anim-d5 { animation-delay: 0.7s; }
+
+/* ─── Interactive States ─── */
+
+.landing-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(245, 158, 11, 0.35);
+}
+.landing-cta:active {
+  transform: translateY(0);
+}
+
+.step-card:hover {
+  border-color: rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.04);
+  transform: translateY(-4px);
+}
+
+.demo-toggle-btn:hover {
+  background: rgba(245, 158, 11, 0.08) !important;
+}
+
+.offer-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+.offer-row-best:hover {
+  background: rgba(34, 197, 94, 0.06) !important;
+}
+
+.detail-btn:hover {
+  transform: translateY(-1px);
+}
+.detail-btn:active {
+  transform: translateY(0);
+}
+
+/* ─── Scrollbar ─── */
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
