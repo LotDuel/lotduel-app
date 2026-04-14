@@ -59,6 +59,16 @@ def fetch_market_data(api_key, make, model, year_min, year_max, mileage_max,
     # Cap radius to free tier limit
     radius = min(radius_miles, 100)
 
+    # Handle variant models (e.g. "RAV4 Hybrid" → search "RAV4", filter for "Hybrid")
+    # MarketCheck stores variants in the listing heading, not the model field
+    variant_keyword = None
+    search_model = model
+    for variant in ["Hybrid", "Prime", "Plug-In", "PHEV", "EV"]:
+        if variant.lower() in model.lower():
+            search_model = model.lower().replace(variant.lower(), "").strip()
+            variant_keyword = variant.lower()
+            break
+
     # Build year range string
     year_range = f"{year_min}-{year_max}" if year_min != year_max else str(year_min)
 
@@ -66,14 +76,14 @@ def fetch_market_data(api_key, make, model, year_min, year_max, mileage_max,
         "api_key": api_key,
         "car_type": "used",
         "make": make,
-        "model": model,
+        "model": search_model,
         "year": year_range,
         "miles_range": f"0-{mileage_max}",
         "latitude": lat,
         "longitude": lng,
         "radius": radius,
         "stats": "price,miles",
-        "rows": 10,  # Get a few listings for context
+        "rows": 50,  # Fetch more so we can filter for variants
         "include_relevant_links": "false",
     }
 
@@ -93,31 +103,53 @@ def fetch_market_data(api_key, make, model, year_min, year_max, mileage_max,
         return None
 
     # Parse results
-    num_listings = data.get("num_found", 0)
-    stats = data.get("stats", {})
-    price_stats = stats.get("price", {})
-    miles_stats = stats.get("miles", {})
     listings = data.get("listings", [])
 
-    if num_listings == 0:
+    # Filter for variant if needed (e.g. only Hybrid listings)
+    if variant_keyword and listings:
+        listings = [
+            l for l in listings
+            if variant_keyword in (l.get("heading") or "").lower()
+        ]
+
+    if not listings:
+        num_found = data.get("num_found", 0)
         logger.info(f"No MarketCheck listings found for {year_range} {make} {model}")
         return {
             "source": "marketcheck",
             "num_listings": 0,
+            "num_total_before_filter": num_found,
+            "variant_filter": variant_keyword,
             "market_value": None,
             "comparables": [],
         }
 
-    # Extract price statistics
-    mean_price = price_stats.get("mean")
-    median_price = price_stats.get("median")
-    min_price = price_stats.get("min")
-    max_price = price_stats.get("max")
+    # Compute price stats from filtered listings
+    prices = [l.get("price") for l in listings if l.get("price")]
+    mileages = [l.get("miles") for l in listings if l.get("miles")]
+
+    if not prices:
+        return {
+            "source": "marketcheck",
+            "num_listings": len(listings),
+            "market_value": None,
+            "comparables": [],
+        }
+
+    prices_sorted = sorted(prices)
+    mid = len(prices_sorted) // 2
+    median_price = (
+        prices_sorted[mid]
+        if len(prices_sorted) % 2 == 1
+        else (prices_sorted[mid - 1] + prices_sorted[mid]) // 2
+    )
+    mean_price = sum(prices) // len(prices)
+    min_price = min(prices)
+    max_price = max(prices)
+    avg_mileage = sum(mileages) // len(mileages) if mileages else None
 
     # Use median as the market value (more robust than mean)
-    market_value = int(median_price) if median_price else (
-        int(mean_price) if mean_price else None
-    )
+    market_value = int(median_price)
 
     # Build comparable listings summary
     comparables = []
@@ -138,13 +170,14 @@ def fetch_market_data(api_key, make, model, year_min, year_max, mileage_max,
 
     return {
         "source": "marketcheck",
-        "num_listings": num_listings,
+        "num_listings": len(listings),
+        "variant_filter": variant_keyword,
         "market_value": market_value,
-        "mean_price": int(mean_price) if mean_price else None,
-        "median_price": int(median_price) if median_price else None,
-        "min_price": int(min_price) if min_price else None,
-        "max_price": int(max_price) if max_price else None,
-        "avg_mileage": int(miles_stats.get("mean", 0)) if miles_stats.get("mean") else None,
+        "mean_price": mean_price,
+        "median_price": int(median_price),
+        "min_price": min_price,
+        "max_price": max_price,
+        "avg_mileage": avg_mileage,
         "comparables": comparables,
         "search_params": {
             "year": year_range,
