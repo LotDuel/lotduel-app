@@ -39,9 +39,11 @@ def create_app(config_name=None):
     # Register blueprints
     from routes.buyer import buyer_bp
     from routes.dealer import dealer_bp
+    from routes.admin import admin_bp
 
     app.register_blueprint(buyer_bp)
     app.register_blueprint(dealer_bp)
+    app.register_blueprint(admin_bp)
 
     # Health check
     @app.route("/api/health")
