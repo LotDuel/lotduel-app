@@ -1,5 +1,5 @@
 # LotDuel — Active Context
-## Last updated: April 14, 2026
+## Last updated: April 14, 2026 (end of initial build session)
 
 ---
 
@@ -113,3 +113,43 @@ MarketCheck live data (April 14, 2026):
 - 5 hybrid listings within 100mi of 98258
 - Median: $35,891, Range: $30,998–$36,999
 - Dealers: Autoright Motors Lake Stevens, Carmax Lynnwood, Carmax Puyallup
+
+---
+
+## Session Log
+
+### April 14, 2026 — Initial Build Session
+**Scope:** Built entire Phase 2 from scratch and deployed to production.
+
+Commits (in order):
+1. `f7945bc` — Phase 2: Flask backend API with database, scoring, dealer invite system
+2. `8e8cf52` — Wire frontend to backend API + add real user flow
+3. `573cf71` — VPS deployment config: nginx, systemd, PostgreSQL, SSL, deploy scripts
+4. `8ec8f27` — Landing page conversion tweaks: CTA, trust strip, emotional closer
+5. `525dce5` — MarketCheck API integration — real market valuation from live inventory
+6. `ca52774` — Fix MarketCheck hybrid filtering
+7. `5209446` — Admin webhook for remote deploys
+8. `3054f00` — Admin webhook: use sudo for privileged commands
+9. `8154148` — Add YouTube transcript tool
+10. `045a94c` — Add memory system for session continuity
+
+Key decisions made:
+- Frontend wiring before VPS deployment (faster feedback loop)
+- MarketCheck free tier for market valuation (not KBB manual entry)
+- Model name "RAV4 Hybrid" → search "RAV4" + filter headings for "hybrid"
+- Admin webhook over SSH (sandbox can't reach port 22)
+- ProtectHome=false + NoNewPrivileges=false in systemd for pgeocode + sudo
+- Two-commit discipline for code vs memory files
+
+VPS fixes applied (not in repo — applied directly):
+- `git config --global --add safe.directory /opt/lotduel/lotduel-app`
+- `chown -R lotduel:lotduel /opt/lotduel`
+- `mkdir -p /home/lotduel && chown lotduel:lotduel /home/lotduel`
+- `sed -i 's/ProtectHome=true/ProtectHome=false/' /etc/systemd/system/lotduel.service`
+- `sed -i 's/NoNewPrivileges=true/NoNewPrivileges=false/' /etc/systemd/system/lotduel.service`
+- sudoers: `/etc/sudoers.d/lotduel` with NOPASSWD for systemctl + journalctl
+- Vercel env var: `VITE_API_URL=https://api.lotduel.com`
+- Vercel custom domain: `lotduel.com` + `www.lotduel.com` added
+- Namecheap DNS: A record `api` → 72.62.164.161, A record `@` updated to 216.198.79.1
+
+Next session should: Focus on user acquisition (Reddit outreach) or whatever Rob wants to build next. The product is deployed and ready for real users.
