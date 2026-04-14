@@ -1,6 +1,6 @@
 import Logo from "./Logo";
 
-export default function LandingPage({ onDemo }) {
+export default function LandingPage({ onDemo, onCreate }) {
   return (
     <div style={{ background: "var(--bg)", color: "#f1f5f9", fontFamily: "var(--font)", position: "relative", overflow: "hidden" }}>
 
@@ -74,7 +74,7 @@ export default function LandingPage({ onDemo }) {
         </p>
 
         <div className="anim-fade-up anim-d4" style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
-          <button onClick={onDemo} className="landing-cta" style={{
+          <button onClick={onCreate} className="landing-cta" style={{
             padding: "16px 40px",
             background: "linear-gradient(135deg, #f59e0b, #d97706)",
             border: "none", borderRadius: 12,
@@ -83,18 +83,18 @@ export default function LandingPage({ onDemo }) {
             transition: "all 0.3s ease",
             boxShadow: "0 4px 24px rgba(245,158,11,0.25)"
           }}>
-            See It In Action
+            Get Started — Free
           </button>
-          <a href="#how-it-works" style={{
+          <button onClick={onDemo} style={{
             padding: "16px 32px",
             background: "rgba(255,255,255,0.04)",
             border: "1px solid var(--border)", borderRadius: 12,
             color: "#94a3b8", fontSize: 17, fontWeight: 600,
-            cursor: "pointer", fontFamily: "var(--font)", textDecoration: "none",
+            cursor: "pointer", fontFamily: "var(--font)",
             transition: "all 0.3s ease"
           }}>
-            How It Works
-          </a>
+            See Demo
+          </button>
         </div>
 
         {/* Stats */}

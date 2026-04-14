@@ -1,22 +1,144 @@
-import { useState } from "react";
-import { SAMPLE_OFFERS, MARKET_VALUE, scoreOffer, getLabel, fmt } from "../data/scoring";
+import { useState, useEffect, useCallback } from "react";
+import { SAMPLE_OFFERS, MARKET_VALUE, REQUEST_INFO, scoreOffer, getLabel, fmt } from "../data/scoring";
+import { getDashboard } from "../api";
 
-export default function Dashboard() {
+export default function Dashboard({ requestId, demo }) {
   const [selectedOffer, setSelectedOffer] = useState(null);
   const [sortBy, setSortBy] = useState("score");
+  const [apiData, setApiData] = useState(null);
+  const [loading, setLoading] = useState(!demo);
+  const [error, setError] = useState(null);
 
-  const scored = SAMPLE_OFFERS.map((o) => ({ ...o, score: scoreOffer(o), diff: MARKET_VALUE - o.otd }))
-    .sort((a, b) => {
-      if (sortBy === "score") return b.score - a.score;
-      if (sortBy === "price") return a.otd - b.otd;
-      if (sortBy === "mileage") return a.mileage - b.mileage;
-      return 0;
-    })
-    .map((o, i) => ({ ...o, rank: i + 1 }));
+  // Fetch real data from API
+  const fetchData = useCallback(async () => {
+    if (demo || !requestId) return;
+    try {
+      const data = await getDashboard(requestId);
+      setApiData(data);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [requestId, demo]);
+
+  useEffect(() => {
+    fetchData();
+    // Auto-refresh every 30s for new offers
+    if (!demo && requestId) {
+      const interval = setInterval(fetchData, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [fetchData, demo, requestId]);
+
+  // Build display data from either demo or API
+  let scored, reqInfo, marketValue, avgOtd, savings, inviteCount, offerCount, status;
+
+  if (demo) {
+    // Demo mode — use hardcoded sample data
+    scored = SAMPLE_OFFERS
+      .map((o) => ({ ...o, score: scoreOffer(o), diff: MARKET_VALUE - o.otd, contact: o.contact }))
+      .sort((a, b) => {
+        if (sortBy === "score") return b.score - a.score;
+        if (sortBy === "price") return a.otd - b.otd;
+        if (sortBy === "mileage") return a.mileage - b.mileage;
+        return 0;
+      })
+      .map((o, i) => ({ ...o, rank: i + 1 }));
+
+    marketValue = MARKET_VALUE;
+    avgOtd = Math.round(scored.reduce((s, o) => s + o.otd, 0) / scored.length);
+    savings = avgOtd - scored[0].otd;
+    inviteCount = 12;
+    offerCount = scored.length;
+    status = "Active";
+    reqInfo = { yearMin: REQUEST_INFO.yearMin, yearMax: REQUEST_INFO.yearMax, make: REQUEST_INFO.make, model: REQUEST_INFO.model, mileageMax: REQUEST_INFO.mileageMax, zip: REQUEST_INFO.zip };
+  } else if (apiData) {
+    // Real mode — use API data
+    const offers = apiData.offers || [];
+    scored = offers
+      .map((o) => ({
+        id: o.id,
+        dealer: o.dealer,
+        city: o.city,
+        year: o.year,
+        trim: o.trim,
+        mileage: o.mileage,
+        otd: o.otd,
+        certified: o.certified,
+        extras: o.extras,
+        contact: o.contact_name,
+        score: o.total_score,
+        rank: o.rank,
+        label: o.label,
+        diff: (apiData.stats.market_value || 28500) - o.otd,
+        stock_number: o.stock_number,
+        notes: o.notes,
+      }))
+      .sort((a, b) => {
+        if (sortBy === "score") return b.score - a.score;
+        if (sortBy === "price") return a.otd - b.otd;
+        if (sortBy === "mileage") return a.mileage - b.mileage;
+        return 0;
+      })
+      .map((o, i) => ({ ...o, rank: i + 1 }));
+
+    const req = apiData.request;
+    reqInfo = { yearMin: req.year_min, yearMax: req.year_max, make: req.make, model: req.model, mileageMax: req.mileage_max, zip: req.zip_code };
+    marketValue = apiData.stats.market_value;
+    avgOtd = apiData.stats.avg_price;
+    savings = apiData.stats.savings;
+    inviteCount = apiData.stats.invite_count;
+    offerCount = apiData.stats.offer_count;
+    status = req.status === "active" ? "Active" : req.status;
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: 48, height: 48, border: "3px solid rgba(245,158,11,0.2)", borderTop: "3px solid #f59e0b", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 20px" }} />
+          <p style={{ color: "#94a3b8", fontSize: 15, fontFamily: "var(--font)" }}>Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div style={{ textAlign: "center", maxWidth: 400 }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+          <h2 style={{ color: "#f1f5f9", fontSize: 22, fontWeight: 700, fontFamily: "var(--font)", marginBottom: 8 }}>Dashboard Not Found</h2>
+          <p style={{ color: "#94a3b8", fontSize: 14, lineHeight: 1.6, fontFamily: "var(--font)" }}>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state — no offers yet
+  if (!scored || scored.length === 0) {
+    return (
+      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div style={{ textAlign: "center", maxWidth: 440 }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
+          <h2 style={{ color: "#f1f5f9", fontSize: 24, fontWeight: 800, fontFamily: "var(--font)", marginBottom: 8 }}>No Offers Yet</h2>
+          <p style={{ color: "#94a3b8", fontSize: 15, lineHeight: 1.6, fontFamily: "var(--font)", marginBottom: 24 }}>
+            Dealers haven't submitted any quotes yet. Send your invite emails and check back soon — this dashboard updates automatically.
+          </p>
+          <div style={{ color: "#475569", fontSize: 13, fontFamily: "var(--font)" }}>
+            {inviteCount} invite{inviteCount !== 1 ? "s" : ""} generated · Auto-refreshes every 30s
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const best = scored[0];
-  const avgOtd = Math.round(scored.reduce((s, o) => s + o.otd, 0) / scored.length);
-  const savings = avgOtd - best.otd;
+  const yearDisplay = reqInfo.yearMin === reqInfo.yearMax ? `${reqInfo.yearMin}` : `${reqInfo.yearMin}–${reqInfo.yearMax}`;
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", padding: "28px 16px", fontFamily: "var(--font)" }}>
@@ -29,11 +151,11 @@ export default function Dashboard() {
           display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 14
         }}>
           <div>
-            <span style={{ color: "#f1f5f9", fontSize: 17, fontWeight: 700 }}>2022–2023 Toyota RAV4 Hybrid</span>
-            <span style={{ color: "#64748b", fontSize: 13, marginLeft: 14 }}>Under 40K mi · Lake Stevens, WA</span>
+            <span style={{ color: "#f1f5f9", fontSize: 17, fontWeight: 700 }}>{yearDisplay} {reqInfo.make} {reqInfo.model}</span>
+            <span style={{ color: "#64748b", fontSize: 13, marginLeft: 14 }}>Under {(reqInfo.mileageMax / 1000).toFixed(0)}K mi · {reqInfo.zip}</span>
           </div>
           <div style={{ display: "flex", gap: 20 }}>
-            {[["Dealers", "12", "#f1f5f9"], ["Offers", String(scored.length), "#f1f5f9"], ["Status", "Active", "var(--green)"]].map(([l, v, c], i) => (
+            {[["Dealers", String(inviteCount), "#f1f5f9"], ["Offers", String(offerCount), "#f1f5f9"], ["Status", status, status === "Active" ? "var(--green)" : "#94a3b8"]].map(([l, v, c], i) => (
               <div key={i} style={{ textAlign: "center" }}>
                 <div style={{ color: "#475569", fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>{l}</div>
                 <div style={{ color: c, fontSize: l === "Status" ? 13 : 19, fontWeight: 700, fontFamily: l === "Status" ? "var(--font)" : "var(--mono)" }}>{v}</div>
@@ -63,7 +185,7 @@ export default function Dashboard() {
             <div style={{ color: "var(--green)", fontSize: 40, fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 1, fontFamily: "var(--mono)" }}>{fmt(best.otd)}</div>
             <div style={{ color: "#f1f5f9", fontSize: 16, fontWeight: 700, marginTop: 10 }}>{best.dealer}</div>
             <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>
-              {best.year} RAV4 Hybrid {best.trim} · {best.mileage.toLocaleString()} mi {best.certified ? "· CPO ✓" : ""}
+              {best.year} {reqInfo.model} {best.trim} · {best.mileage.toLocaleString()} mi {best.certified ? "· CPO ✓" : ""}
             </div>
             <div style={{ marginTop: 14, display: "inline-block", background: "rgba(34,197,94,0.08)", padding: "7px 16px", borderRadius: 8 }}>
               <span style={{ color: "var(--green)", fontSize: 15, fontWeight: 800, fontFamily: "var(--mono)" }}>
@@ -77,10 +199,10 @@ export default function Dashboard() {
             <div style={{ color: "#475569", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 20 }}>Your Leverage</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 22 }}>
               {[
-                ["Market Avg", fmt(MARKET_VALUE), "#f1f5f9"],
+                ["Market Avg", fmt(marketValue), "#f1f5f9"],
                 ["Offer Avg", fmt(avgOtd), "#f1f5f9"],
-                ["Savings vs Avg", fmt(savings), "var(--green)"],
-                ["Leverage", "High", "var(--amber)"]
+                ["Savings vs Avg", fmt(savings), savings > 0 ? "var(--green)" : "var(--red)"],
+                ["Leverage", offerCount >= 5 ? "High" : offerCount >= 3 ? "Medium" : "Building", "var(--amber)"]
               ].map(([l, v, c], i) => (
                 <div key={i}>
                   <div style={{ color: "#475569", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, marginBottom: 4 }}>{l}</div>
@@ -94,7 +216,7 @@ export default function Dashboard() {
               border: "1px solid rgba(245,158,11,0.1)"
             }}>
               <span style={{ color: "var(--amber)", fontSize: 12, fontWeight: 700 }}>
-                💡 {scored.length} competing offers — strong negotiating position
+                💡 {offerCount} competing offer{offerCount !== 1 ? "s" : ""} — {offerCount >= 5 ? "strong" : offerCount >= 3 ? "growing" : "early"} negotiating position
               </span>
             </div>
           </div>
@@ -112,6 +234,13 @@ export default function Dashboard() {
               fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font)", transition: "all 0.2s"
             }}>{l}</button>
           ))}
+          {!demo && (
+            <button onClick={fetchData} className="demo-toggle-btn" style={{
+              marginLeft: "auto", padding: "7px 16px", borderRadius: 8,
+              border: "1px solid rgba(255,255,255,0.06)", background: "transparent",
+              color: "#64748b", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font)"
+            }}>↻ Refresh</button>
+          )}
         </div>
 
         {/* Table */}
@@ -132,7 +261,7 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {scored.map((offer, idx) => {
-                  const label = getLabel(offer.score);
+                  const label = demo ? getLabel(offer.score) : { text: offer.label, ...getLabelStyle(offer.label) };
                   const isFirst = offer.rank === 1;
                   return (
                     <tr key={offer.id}
@@ -149,7 +278,7 @@ export default function Dashboard() {
                       </td>
                       <td style={{ padding: "16px" }}>
                         <div style={{ color: "#f1f5f9", fontWeight: 700, fontSize: 14 }}>{offer.dealer}</div>
-                        <div style={{ color: "#475569", fontSize: 12 }}>{offer.city}, WA</div>
+                        <div style={{ color: "#475569", fontSize: 12 }}>{offer.city}{offer.city ? ", WA" : ""}</div>
                       </td>
                       <td style={{ padding: "16px", color: "#cbd5e1", fontSize: 14, fontWeight: 500 }}>{offer.year} {offer.trim}</td>
                       <td style={{ padding: "16px", color: "#94a3b8", fontSize: 14, fontFamily: "var(--mono)", whiteSpace: "nowrap" }}>{offer.mileage.toLocaleString()}</td>
@@ -198,7 +327,7 @@ export default function Dashboard() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 28 }}>
               <div>
                 <div style={{ color: "#f1f5f9", fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em" }}>{selectedOffer.dealer}</div>
-                <div style={{ color: "#64748b", fontSize: 13, marginTop: 4 }}>{selectedOffer.city}, WA · Contact: {selectedOffer.contact}</div>
+                <div style={{ color: "#64748b", fontSize: 13, marginTop: 4 }}>{selectedOffer.city}{selectedOffer.city ? ", WA" : ""}{selectedOffer.contact ? ` · Contact: ${selectedOffer.contact}` : ""}</div>
               </div>
               <button onClick={() => setSelectedOffer(null)} style={{
                 background: "rgba(255,255,255,0.05)", border: "none",
@@ -214,7 +343,7 @@ export default function Dashboard() {
                 ["Year / Trim", `${selectedOffer.year} ${selectedOffer.trim}`, "#f1f5f9", "var(--font)"],
                 ["Mileage", `${selectedOffer.mileage.toLocaleString()} mi`, "#f1f5f9", "var(--mono)"],
                 ["Certified", selectedOffer.certified ? "Yes (CPO)" : "No", selectedOffer.certified ? "var(--green)" : "#94a3b8", "var(--font)"],
-                ["Score", `${selectedOffer.score}/100`, getLabel(selectedOffer.score).color, "var(--mono)"]
+                ["Score", `${selectedOffer.score}/100`, (demo ? getLabel(selectedOffer.score) : getLabelStyle(selectedOffer.label)).color, "var(--mono)"]
               ].map(([label, val, color, ff], i) => (
                 <div key={i} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: "16px 18px" }}>
                   <div style={{ color: "#475569", fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{label}</div>
@@ -251,4 +380,11 @@ export default function Dashboard() {
       )}
     </div>
   );
+}
+
+// Helper: get label styles from label text (for API data)
+function getLabelStyle(label) {
+  if (label === "Best Deal") return { color: "#22c55e", bg: "rgba(34,197,94,0.12)" };
+  if (label === "Competitive") return { color: "#eab308", bg: "rgba(234,179,8,0.12)" };
+  return { color: "#ef4444", bg: "rgba(239,68,68,0.12)" };
 }

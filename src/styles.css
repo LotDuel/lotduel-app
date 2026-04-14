@@ -59,6 +59,10 @@ body {
   50% { opacity: 0.06; }
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .anim-fade-up {
   animation: fadeUp 0.7s ease-out forwards;
   opacity: 0;
