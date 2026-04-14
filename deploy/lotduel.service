@@ -1,0 +1,39 @@
+# ═══════════════════════════════════════════════════════════════
+# LotDuel API — Systemd Service
+# Install: sudo cp lotduel.service /etc/systemd/system/
+# Enable:  sudo systemctl enable lotduel
+# Start:   sudo systemctl start lotduel
+# Logs:    sudo journalctl -u lotduel -f
+# ═══════════════════════════════════════════════════════════════
+
+[Unit]
+Description=LotDuel API (Gunicorn)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=notify
+User=lotduel
+Group=lotduel
+WorkingDirectory=/opt/lotduel/lotduel-app/backend
+EnvironmentFile=/opt/lotduel/lotduel-app/backend/.env
+ExecStart=/opt/lotduel/lotduel-app/backend/venv/bin/gunicorn wsgi:app \
+    --bind 127.0.0.1:5000 \
+    --workers 2 \
+    --timeout 30 \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/lotduel
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
