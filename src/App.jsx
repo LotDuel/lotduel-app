@@ -3,6 +3,8 @@ import LandingPage from "./components/LandingPage";
 import Dashboard from "./components/Dashboard";
 import DealerForm from "./components/DealerForm";
 import CreateRequest from "./components/CreateRequest";
+import PrivacyPolicy from "./components/PrivacyPolicy";
+import TermsOfService from "./components/TermsOfService";
 
 function parseRoute() {
   const path = window.location.pathname;
@@ -21,6 +23,12 @@ function parseRoute() {
   // /demo — interactive demo (sample data)
   if (path === "/demo") return { view: "demo-dashboard" };
   if (path === "/demo/dealer") return { view: "demo-dealer" };
+
+  // /privacy — privacy policy
+  if (path === "/privacy") return { view: "privacy" };
+
+  // /terms — terms of service
+  if (path === "/terms") return { view: "terms" };
 
   // / — landing page
   return { view: "landing" };
@@ -42,7 +50,17 @@ export default function App() {
 
   // Landing page
   if (route.view === "landing") {
-    return <LandingPage onDemo={() => navigate("/demo")} onCreate={() => navigate("/new")} />;
+    return <LandingPage onDemo={() => navigate("/demo")} onCreate={() => navigate("/new")} onNavigate={navigate} />;
+  }
+
+  // Privacy Policy
+  if (route.view === "privacy") {
+    return <PrivacyPolicy onBack={() => navigate("/")} />;
+  }
+
+  // Terms of Service
+  if (route.view === "terms") {
+    return <TermsOfService onBack={() => navigate("/")} />;
   }
 
   // Create request flow

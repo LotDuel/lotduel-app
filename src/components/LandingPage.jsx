@@ -1,6 +1,6 @@
 import Logo from "./Logo";
 
-export default function LandingPage({ onDemo, onCreate }) {
+export default function LandingPage({ onDemo, onCreate, onNavigate }) {
   return (
     <div style={{ background: "var(--bg)", color: "#f1f5f9", fontFamily: "var(--font)", position: "relative", overflow: "hidden" }}>
 
@@ -254,7 +254,15 @@ export default function LandingPage({ onDemo, onCreate }) {
         display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16
       }}>
         <Logo size={26} />
-        <p style={{ color: "#475569", fontSize: 13, fontWeight: 400 }}>© 2026 LotDuel. Built in Washington State.</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+          <a href="/privacy" onClick={(e) => { e.preventDefault(); onNavigate("/privacy"); }} style={{
+            color: "#475569", fontSize: 13, fontWeight: 400, textDecoration: "none", cursor: "pointer", transition: "color 0.2s"
+          }} onMouseEnter={(e) => e.target.style.color = "#94a3b8"} onMouseLeave={(e) => e.target.style.color = "#475569"}>Privacy Policy</a>
+          <a href="/terms" onClick={(e) => { e.preventDefault(); onNavigate("/terms"); }} style={{
+            color: "#475569", fontSize: 13, fontWeight: 400, textDecoration: "none", cursor: "pointer", transition: "color 0.2s"
+          }} onMouseEnter={(e) => e.target.style.color = "#94a3b8"} onMouseLeave={(e) => e.target.style.color = "#475569"}>Terms of Service</a>
+          <p style={{ color: "#475569", fontSize: 13, fontWeight: 400 }}>© 2026 LotDuel</p>
+        </div>
       </footer>
     </div>
   );
